@@ -1,0 +1,47 @@
+# Misc
+RANDOM_SEED: 123
+
+# Model
+LOSS: WBCE  # [MSE, BCE, WBCE] (default: MSE)
+USE_BCE: True # if True BCE and WBCE will be used as metrics (default: False)
+## temporal
+BASE_MODEL: composite  # [autoencoder, composite]
+DIM_STATE: 32
+LSTM_COUNT: 1  # [1, 2]
+SEQ_LEN: 16
+PRED_LEN: 8  # composite specific
+## spatial
+DIM_FEATURE: 128
+SPATIAL_CODER: dcgan  # [resnet, dcgan, unet, linknet, vgg]
+DIM_OBSERVATION: [32, 32, 4]  # channels have to be calculated manually for carla. dep and isg_edges have 1 channel, all others 3
+CHANNELS_OUT: 1  # carla specific (default: DIM_OBSERVATION[2])
+BACKBONE: resnet18  # UNet, LinkNet specific
+ENC_WEIGHTS: None  # UNet, LinkNet specific (default: None)
+SKIP_CONNECTIONS: True  # VGG/DCGAN [True=concat, residual=add], ResNet [True=add] specific (default: False)
+FEATURE_ACTIVATION: tanh  # VGG, DCGAN, ResNet specific (default: linear)
+
+# Training
+LR: [0.01, 0.001, 0.0001, 0.00001]
+LR_BOUNDARIES: [60, 80, 120]  # PiecewiseConstantDecay specific
+BATCH_SIZE: 8
+EPOCHS: 10
+STEPS_PER_EPOCH: 8
+VAL_STEPS: 3
+VAL_FREQ: 1
+HIST_FREQ: 1
+CKPT_FREQ: 1
+PATIENCE: 0  # EarlyStopping specific (default: 0 does not add callback)
+EXPECT_PARTIAL: False # TensorflowCheckpoint specific (default: False)
+
+# Dataset
+DATASET: carla/default3_small
+DATASET_I: [rgb, dep]  # carla specific [rgb, dep, ofl, ssg, isg, isg_edges] (default: [rgb])
+DATASET_O: isg_edges  # carla specific (default: rgb)
+DISTRIBUTION: test3  # whitdots specific
+SEQ_CENTERED: False
+
+# Evaluation
+EVAL_CKPT: best  # best, latest, [number (for TensorBoard e.g. best x + 1)]
+# EVAL_METRIC: val_pixelspace/PSNR  # best specific (default: val_loss)
+EVAL_MODE: min  # best specific (default: min)
+EVAL_AMOUNT: 10

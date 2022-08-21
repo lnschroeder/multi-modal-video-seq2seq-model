@@ -1,0 +1,7 @@
+TITLE: Lars Niklas Schroeder Composite LSTM example
+DESCRIPTION: Example composite LSTM
+SOURCE_DIR: /home/niklas/multi-modal-video-seq2seq-model/src
+MODULE: models.srivastava
+IMAGE_URL: nschroeder/tensorflow:2.8.0-gpu-v2
+DATA_DIR: /shared/datasets
+EXPERIMENT_DIR: /home/niklas/multi-modal-video-seq2seq-model/example

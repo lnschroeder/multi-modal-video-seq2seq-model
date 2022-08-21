@@ -1,0 +1,30 @@
+
+/home/niklas/bt-code/src
+4d0a02d0030c3f3cd0987798e5214230230cacf0
+M  ../Dockerfile
+M  ../README.md
+AM ../example/config.yml
+R  ../models/testing/cluster/params.yml -> ../example/params.yml
+ D ../models/log_gpus.sh
+ D ../models/testing/carla_rs/config.slurm
+ D ../models/testing/carla_rs/config.yml
+ D ../models/testing/carla_rs/params.yml
+ D ../models/testing/cluster/.stoplog
+ D ../models/testing/cluster/config.slurm
+ D ../models/testing/cluster/config.yml
+ D ../models/testing/cluster/lschroeder.20990549.gpu053.out
+ D ../models/testing/cluster/lschroeder.20990554.gpu053.out
+ D ../models/testing/cluster/run.slurm
+ D ../models/testing/local/Untitled.ipynb
+ M ../models/testing/local/config.yml
+ D ../models/testing/local/helpful.cmds
+ M ../models/testing/local/params.yml
+ D ../models/testing/random_search_kth/config.slurm
+ D ../models/testing/random_search_kth/config.yml
+ D ../models/testing/random_search_kth/grid.yml
+ D ../models/testing/random_search_kth/params.yml
+ M data/loader.py
+ M models/srivastava.py
+?? ../example/src/
+
+================================================================================

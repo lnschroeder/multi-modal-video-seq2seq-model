@@ -1,0 +1,920 @@
+
+diff --git a/example/config.yml b/example/config.yml
+index c666760..88489fa 100644
+--- a/example/config.yml
++++ b/example/config.yml
+@@ -1,7 +1,7 @@
+ TITLE: Lars Niklas Schroeder Composite LSTM example
+ DESCRIPTION: Example composite LSTM
+-SOURCE_DIR: <ABSOLUTE_PATH_TO_THIS_REPO>/src
++SOURCE_DIR: /home/niklas/bt-code/src
+ MODULE: models.srivastava
+ IMAGE_URL: nschroeder/tensorflow:2.8.0-gpu-v2
+-DATA_DIR: <ABSOLUTE_PATH_TO_THE_DATASET_FOLDER>
++DATA_DIR: /home/niklas/datasets
+ EXPERIMENT_DIR: /home/niklas/Documents/uni/bt-code/example
+diff --git a/models/log_gpus.sh b/models/log_gpus.sh
+deleted file mode 100755
+index 80ea113..0000000
+--- a/models/log_gpus.sh
++++ /dev/null
+@@ -1,36 +0,0 @@
+-#!/bin/bash
+-
+-# define Variable
+-QUERY=timestamp,index,utilization.gpu,utilization.memory
+-WD=$1
+-STOP_FILE="${WD}/.stoplog"
+-LOG_DIR="${WD}/log"
+-GPU_LOG="${LOG_DIR}/lschroeder.${SLURM_JOB_ID}.gpu.csv"
+-echo "Write GPU usage to ${GPU_LOG}"
+-
+-# Check argument
+-if [ ! -d "${WD}" ]; then
+-  echo "[GPU Logger]: Invalid first argument. '${WD}' is not a directory"
+-  exit 1
+-fi
+-
+-mkdir -p "${LOG_DIR}"
+-
+-# Remove .stoplog file if exists
+-if [ -f "${STOP_FILE}" ]; then
+-  rm "${STOP_FILE}"
+-fi
+-
+-# Log header header to file
+-nvidia-smi --query-gpu="${QUERY}" --format=csv &>"${GPU_LOG}"
+-
+-# Log 10 seconds and then check if '.stoplog' file exists
+-until [ -f "${STOP_FILE}" ]; do
+-  timeout 10 nvidia-smi --query-gpu="${QUERY}" --format=csv,noheader -l 1 &>>"${GPU_LOG}"
+-done
+-
+-#echo 'total,used,free,shared,buff/cache,available,total_s,used_s,free_s' &> $LOG_RAM
+-#free | tail -n 2 | tr -s '[:blank:]' ',' | sed 's/^[^,]*,//' | sed -z 's/\n/,/'` &> $LOG_RAM
+-#mv "${FILE_NAME}" "${LOG_DIR}"
+-
+-echo 'Finished GPU logging in ' "${GPU_LOG}"
+diff --git a/models/testing/carla_rs/config.slurm b/models/testing/carla_rs/config.slurm
+deleted file mode 100644
+index 633d854..0000000
+--- a/models/testing/carla_rs/config.slurm
++++ /dev/null
+@@ -1,35 +0,0 @@
+-#!/bin/bash
+-
+-#SBATCH -D .
+-#SBATCH --output=lschroeder.%j.%N.out
+-#SBATCH --job-name=LNS_BT
+-#SBATCH --ntasks=2
+-#SBATCH --cpus-per-task=2
+-#SBATCH --gres=gpu:v100s:1
+-#SBATCH --mem=64G
+-
+-## Max Walltime vorgeben:
+-#SBATCH --time=04:00:00
+-
+-## Auf GPU rechnen:
+-#SBATCH --partition=ex_scioi_gpu
+-
+-# we need internet
+-export https_proxy=http://frontend01:3128/
+-export http_proxy=http://frontend01:3128/
+-
+-# load moduels
+-module load python/3.7.4
+-module load singularity/3.7.0
+-module load nvidia/cuda/11.2
+-
+-# log GPUs utilization
+-#GPU_LOGGER_SCRIPT=~/bt-code/models/log_gpus.sh
+-
+-#if [ -f "${GPU_LOGGER_SCRIPT}" ]; then
+-#  echo 'Logging GPU with: ' "${GPU_LOGGER_SCRIPT}"
+-#  "${GPU_LOGGER_SCRIPT}" $(pwd) &
+-#else
+-#  echo 'Could not find GPU logger script at ' "${GPU_LOGGER_SCRIPT}"
+-#  exit 1
+-#fi
+diff --git a/models/testing/carla_rs/config.yml b/models/testing/carla_rs/config.yml
+deleted file mode 100644
+index 31d1110..0000000
+--- a/models/testing/carla_rs/config.yml
++++ /dev/null
+@@ -1,6 +0,0 @@
+-TITLE: Srivastava Composite LSTM
+-DESCRIPTION: Test composite LSTM
+-SOURCE_DIR: /home/users/l/l.schroeder/bt-code/src
+-MODULE: models.srivastava
+-IMAGE_URL: /scratch/lschroeder/images/tensorflow_2.8.0-gpu-v1.sif
+-DATA_DIR: /scratch/lschroeder/datasets
+\ No newline at end of file
+diff --git a/models/testing/carla_rs/params.yml b/models/testing/carla_rs/params.yml
+deleted file mode 100644
+index a214e15..0000000
+--- a/models/testing/carla_rs/params.yml
++++ /dev/null
+@@ -1,44 +0,0 @@
+-# Misc
+-RANDOM_SEED: 123
+-
+-# Model
+-## temporal
+-BASE_MODEL: autoencoder  # [autoencoder, composite]
+-DIM_STATE: 32
+-LSTM_COUNT: 1
+-SEQ_LEN: 20
+-PRED_LEN: 5  # composite specific
+-## spatial
+-DIM_FEATURE: 128
+-SPATIAL_CODER: resnet
+-DIM_OBSERVATION: [64, 64, 6]
+-CHANNELS_OUT: 1  # carla specific (default: DIM_OBSERVATION[2])
+-BACKBONE: resnet18  # UNet, LinkNet specific
+-ENC_WEIGHTS: None  # UNet, LinkNet specific (default: None)
+-SKIP_CONNECTIONS: True  # VGG/DCGAN [True=concat, residual=add], ResNet [True=add] specific (default: False)
+-FEATURE_ACTIVATION: tanh  # VGG, DCGAN, ResNet specific (default: linear)
+-
+-# Training
+-LR: 0.001
+-LR_BOUNDARIES: [50000, 75000, 100000, 200000]  # PiecewiseConstantDecay specific
+-BATCH_SIZE: 20
+-EPOCHS: 2500
+-STEPS_PER_EPOCH: 20
+-VAL_STEPS: 1
+-VAL_FREQ: 1
+-HIST_FREQ: 1
+-CKPT_FREQ: 15
+-PATIENCE: 0  # EarlyStopping specific (default: 0 does not add callback)
+-EXPECT_PARTIAL: False # TensorflowCheckpoint specific (default: False)
+-
+-# Dataset
+-DATASET: carla/default3
+-DATASET_I: [rgb, ofl]  # carla specific (default: [rgb])
+-DATASET_O: isg_edges  # carla specific (default: rgb)
+-DISTRIBUTION: test3  # whitdots specific
+-SEQ_CENTERED: False
+-
+-# Evaluation
+-EVAL_CKPT: best  # best, latest, [number (for TensorBoard e.g. best x + 1)]
+-EVAL_METRIC: val_pixelspace/MSE  # best specific (default: val_loss)
+-EVAL_MODE: min  # best specific (default: min)
+diff --git a/models/testing/cluster/.stoplog b/models/testing/cluster/.stoplog
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/models/testing/cluster/config.slurm b/models/testing/cluster/config.slurm
+deleted file mode 100644
+index 59012bd..0000000
+--- a/models/testing/cluster/config.slurm
++++ /dev/null
+@@ -1,35 +0,0 @@
+-#!/bin/bash
+-
+-#SBATCH -D .
+-#SBATCH --output=lschroeder.%j.%N.out
+-#SBATCH --job-name=LNS_BT
+-#SBATCH --ntasks=1
+-#SBATCH --cpus-per-task=8
+-#SBATCH --gres=gpu:v100s:1
+-#SBATCH --mem=32G
+-
+-## Max Walltime vorgeben:
+-#SBATCH --time=01:00:00
+-
+-## Auf GPU rechnen:
+-#SBATCH --partition=ex_scioi_gpu
+-
+-# we need internet
+-export https_proxy=http://frontend01:3128/
+-export http_proxy=http://frontend01:3128/
+-
+-# load moduels
+-module load python/3.7.4
+-module load singularity/3.7.0
+-module load nvidia/cuda/11.2
+-
+-# log GPUs utilization
+-#GPU_LOGGER_SCRIPT=~/bt-code/models/log_gpus.sh
+-
+-#if [ -f "${GPU_LOGGER_SCRIPT}" ]; then
+-#  echo 'Logging GPU with: ' "${GPU_LOGGER_SCRIPT}"
+-#  "${GPU_LOGGER_SCRIPT}" $(pwd) &
+-#else
+-#  echo 'Could not find GPU logger script at ' "${GPU_LOGGER_SCRIPT}"
+-#  exit 1
+-#fi
+diff --git a/models/testing/cluster/config.yml b/models/testing/cluster/config.yml
+deleted file mode 100644
+index d4492cc..0000000
+--- a/models/testing/cluster/config.yml
++++ /dev/null
+@@ -1,7 +0,0 @@
+-TITLE: Srivastava Composite LSTM
+-DESCRIPTION: Test composite LSTM
+-SOURCE_DIR: /home/users/l/l.schroeder/bt-code/src
+-MODULE: models.srivastava
+-IMAGE_URL: /scratch/lschroeder/images/tensorflow_2.8.0-gpu-v2.sif
+-DATA_DIR: /scratch/lschroeder/datasets
+-EXPERIMENT_DIR: /home/users/l/l.schroeder/bt-code/models/testing/cluster
+diff --git a/models/testing/cluster/lschroeder.20990549.gpu053.out b/models/testing/cluster/lschroeder.20990549.gpu053.out
+deleted file mode 100644
+index a9e8aed..0000000
+--- a/models/testing/cluster/lschroeder.20990549.gpu053.out
++++ /dev/null
+@@ -1,87 +0,0 @@
+-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+-                                 Dload  Upload   Total   Spent    Left  Speed
+-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+-                                 Dload  Upload   Total   Spent    Left  Speed
+-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+-                                 Dload  Upload   Total   Spent    Left  Speed
+-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+-                                 Dload  Upload   Total   Spent    Left  Speed
+-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+-WARNING: group: unknown groupid 1177255
+-Segmentation Models: using `tf.keras` framework.
+---- train / 83016 ---
+-BACKBONE: resnet18
+-BASE_MODEL: composite
+-BATCH_SIZE: 70
+-CHANNELS_OUT: 1
+-CKPT_DIR: /wd/out/ckpts
+-CKPT_FREQ: 3
+-DATASET: carla/default4
+-DATASET_I:
+-- rgb
+-- dep
+-DATASET_O: isg_edges
+-DATA_DIR: /wd/data
+-DESCRIPTION: Test composite LSTM
+-DIM_FEATURE: 128
+-DIM_OBSERVATION:
+-- 64
+-- 64
+-- 4
+-DIM_STATE: 32
+-DISTRIBUTION: test3
+-ENC_WEIGHTS: None
+-EPOCHS: 2500
+-EVAL_AMOUNT: 10
+-EVAL_CKPT: best
+-EVAL_DIR: /wd/out/eval
+-EVAL_MODE: min
+-EXPECT_PARTIAL: false
+-EXPERIMENT_DIR: /wd/exp
+-FEATURE_ACTIVATION: tanh
+-HIST_FREQ: 1
+-IMAGE_URL: /scratch/lschroeder/images/tensorflow_2.8.0-gpu-v2.sif
+-LOG_DIR: /wd/out/log
+-LOSS: MSE
+-LR:
+-- 0.001
+-- 0.0005
+-- 0.00025
+-- 1.25e-05
+-- 5.0e-06
+-LR_BOUNDARIES:
+-- 50000
+-- 75000
+-- 100000
+-- 200000
+-LSTM_COUNT: 1
+-MODEL_DIR: /wd/out
+-MODULE: models.srivastava
+-PATIENCE: 0
+-PRED_LEN: 5
+-RANDOM_SEED: 123
+-SEQ_CENTERED: false
+-SEQ_LEN: 20
+-SKIP_CONNECTIONS: true
+-SOURCE_DIR: /home/users/l/l.schroeder/bt-code/src
+-SPATIAL_CODER: resnet
+-STEPS_PER_EPOCH: 70
+-TITLE: Srivastava Composite LSTM
+-USE_BCE: true
+-VAL_FREQ: 1
+-VAL_STEPS: 1
+-
+---- ---------------- ---
+-Epoch 1/2500
+-70/70 - 207s - loss: 0.0553 - pixelspace/BCE: 0.1985 - pixelspace/WBCE: 0.1141 - pixelspace/MSE: 0.0553 - pixelspace/SSIM: 0.2814 - pixelspace/PSNR: 13.1379 - val_loss: 0.0895 - val_pixelspace/BCE: 0.3123 - val_pixelspace/WBCE: 0.0724 - val_pixelspace/MSE: 0.0895 - val_pixelspace/SSIM: 0.1068 - val_pixelspace/PSNR: 10.5102 - 207s/epoch - 3s/step
+-Epoch 2/2500
+-70/70 - 178s - loss: 0.0433 - pixelspace/BCE: 0.1571 - pixelspace/WBCE: 0.1061 - pixelspace/MSE: 0.0433 - pixelspace/SSIM: 0.3965 - pixelspace/PSNR: 13.8099 - val_loss: 0.0671 - val_pixelspace/BCE: 0.2679 - val_pixelspace/WBCE: 0.0723 - val_pixelspace/MSE: 0.0671 - val_pixelspace/SSIM: 0.0363 - val_pixelspace/PSNR: 11.7635 - 178s/epoch - 3s/step
+-Epoch 3/2500
+-70/70 - 191s - loss: 0.0415 - pixelspace/BCE: 0.1496 - pixelspace/WBCE: 0.0999 - pixelspace/MSE: 0.0415 - pixelspace/SSIM: 0.4187 - pixelspace/PSNR: 13.9938 - val_loss: 0.0441 - val_pixelspace/BCE: 0.1731 - val_pixelspace/WBCE: 0.0914 - val_pixelspace/MSE: 0.0441 - val_pixelspace/SSIM: 0.1635 - val_pixelspace/PSNR: 13.7163 - 191s/epoch - 3s/step
+-Epoch 4/2500
+-70/70 - 178s - loss: 0.0397 - pixelspace/BCE: 0.1423 - pixelspace/WBCE: 0.0939 - pixelspace/MSE: 0.0397 - pixelspace/SSIM: 0.4434 - pixelspace/PSNR: 14.1955 - val_loss: 0.0399 - val_pixelspace/BCE: 0.1435 - val_pixelspace/WBCE: 0.0886 - val_pixelspace/MSE: 0.0399 - val_pixelspace/SSIM: 0.3674 - val_pixelspace/PSNR: 14.1489 - 178s/epoch - 3s/step
+-Epoch 5/2500
+-slurmstepd: error: *** JOB 20990549 ON gpu053 CANCELLED AT 2022-03-22T20:06:28 ***
+diff --git a/models/testing/cluster/lschroeder.20990554.gpu053.out b/models/testing/cluster/lschroeder.20990554.gpu053.out
+deleted file mode 100644
+index 76929af..0000000
+--- a/models/testing/cluster/lschroeder.20990554.gpu053.out
++++ /dev/null
+@@ -1,80 +0,0 @@
+-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+-                                 Dload  Upload   Total   Spent    Left  Speed
+-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+-                                 Dload  Upload   Total   Spent    Left  Speed
+-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+-                                 Dload  Upload   Total   Spent    Left  Speed
+-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+-                                 Dload  Upload   Total   Spent    Left  Speed
+-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+-WARNING: group: unknown groupid 1177255
+-Segmentation Models: using `tf.keras` framework.
+---- evaluate / 217322 ---
+-BACKBONE: resnet18
+-BASE_MODEL: composite
+-BATCH_SIZE: 70
+-CHANNELS_OUT: 1
+-CKPT_DIR: /wd/out/ckpts
+-CKPT_FREQ: 3
+-DATASET: carla/default4
+-DATASET_I:
+-- rgb
+-- dep
+-DATASET_O: isg_edges
+-DATA_DIR: /wd/data
+-DESCRIPTION: Test composite LSTM
+-DIM_FEATURE: 128
+-DIM_OBSERVATION:
+-- 64
+-- 64
+-- 4
+-DIM_STATE: 32
+-DISTRIBUTION: test3
+-ENC_WEIGHTS: None
+-EPOCHS: 2500
+-EVAL_AMOUNT: 10
+-EVAL_CKPT: best
+-EVAL_DIR: /wd/out/eval
+-EVAL_MODE: min
+-EXPECT_PARTIAL: false
+-EXPERIMENT_DIR: /wd/exp
+-FEATURE_ACTIVATION: tanh
+-HIST_FREQ: 1
+-IMAGE_URL: /scratch/lschroeder/images/tensorflow_2.8.0-gpu-v2.sif
+-LOG_DIR: /wd/out/log
+-LOSS: MSE
+-LR:
+-- 0.001
+-- 0.0005
+-- 0.00025
+-- 1.25e-05
+-- 5.0e-06
+-LR_BOUNDARIES:
+-- 50000
+-- 75000
+-- 100000
+-- 200000
+-LSTM_COUNT: 1
+-MODEL_DIR: /wd/out
+-MODULE: models.srivastava
+-PATIENCE: 0
+-PRED_LEN: 5
+-RANDOM_SEED: 123
+-SEQ_CENTERED: false
+-SEQ_LEN: 20
+-SKIP_CONNECTIONS: true
+-SOURCE_DIR: /home/users/l/l.schroeder/bt-code/src
+-SPATIAL_CODER: resnet
+-STEPS_PER_EPOCH: 70
+-TITLE: Srivastava Composite LSTM
+-USE_BCE: true
+-VAL_FREQ: 1
+-VAL_STEPS: 1
+-
+---- ---------------- ---
+-Using /wd/out/ckpts/ckpt.4.-5 for evaluation
+-0it [00:00, ?it/s]1it [00:01,  1.06s/it]2it [00:02,  1.07s/it]3it [00:03,  1.06s/it]4it [00:04,  1.08s/it]5it [00:06,  1.33s/it]5it [00:06,  1.21s/it]
+-- Finished evaluation - 
+diff --git a/models/testing/cluster/run.slurm b/models/testing/cluster/run.slurm
+deleted file mode 100644
+index c8e6c23..0000000
+--- a/models/testing/cluster/run.slurm
++++ /dev/null
+@@ -1,37 +0,0 @@
+-#!/bin/bash
+-
+-#SBATCH -D .
+-#SBATCH --output=lschroeder.%j.%N.out
+-#SBATCH --job-name=LNS_BT
+-#SBATCH --ntasks=1
+-#SBATCH --cpus-per-task=8
+-#SBATCH --gres=gpu:v100s:1
+-#SBATCH --mem=32G
+-
+-## Max Walltime vorgeben:
+-#SBATCH --time=01:00:00
+-
+-## Auf GPU rechnen:
+-#SBATCH --partition=ex_scioi_gpu
+-
+-# we need internet
+-export https_proxy=http://frontend01:3128/
+-export http_proxy=http://frontend01:3128/
+-
+-# load moduels
+-module load python/3.7.4
+-module load singularity/3.7.0
+-module load nvidia/cuda/11.2
+-
+-# log GPUs utilization
+-#GPU_LOGGER_SCRIPT=~/bt-code/models/log_gpus.sh
+-
+-#if [ -f "${GPU_LOGGER_SCRIPT}" ]; then
+-#  echo 'Logging GPU with: ' "${GPU_LOGGER_SCRIPT}"
+-#  "${GPU_LOGGER_SCRIPT}" $(pwd) &
+-#else
+-#  echo 'Could not find GPU logger script at ' "${GPU_LOGGER_SCRIPT}"
+-#  exit 1
+-#fi
+-
+-singularity exec --nv --pwd /wd --bind /home/users/l/l.schroeder/mltk/yassmltk:/wd/yassmltk --bind /home/users/l/l.schroeder/bt-code/models/testing/cluster:/wd/exp --bind /home/users/l/l.schroeder/bt-code/models/testing/cluster/src:/wd/src --bind /scratch/lschroeder/datasets:/wd/data --bind /home/users/l/l.schroeder/bt-code/models/testing/cluster:/wd/out /scratch/lschroeder/images/tensorflow_2.8.0-gpu-v2.sif python3 -m yassmltk.docker_hook -ot
+\ No newline at end of file
+diff --git a/models/testing/local/Untitled.ipynb b/models/testing/local/Untitled.ipynb
+deleted file mode 100644
+index 4749c18..0000000
+--- a/models/testing/local/Untitled.ipynb
++++ /dev/null
+@@ -1,209 +0,0 @@
+-{
+- "cells": [
+-  {
+-   "cell_type": "code",
+-   "execution_count": 9,
+-   "id": "30612632",
+-   "metadata": {},
+-   "outputs": [
+-    {
+-     "name": "stdout",
+-     "output_type": "stream",
+-     "text": [
+-      "['evaluation_loss_vs_iterations', 'evaluation_pixelspace/MSE_vs_iterations', 'evaluation_pixelspace/SSIM_vs_iterations', 'evaluation_pixelspace/PSNR_vs_iterations', 'epoch_loss', 'epoch_pixelspace/MSE', 'epoch_pixelspace/SSIM', 'epoch_pixelspace/PSNR']\n",
+-      "[TensorEvent(wall_time=1645720002.036819, step=0, tensor_proto=dtype: DT_FLOAT\n",
+-      "tensor_shape {\n",
+-      "}\n",
+-      "tensor_content: \"Y\\366\\373>\"\n",
+-      "), TensorEvent(wall_time=1645720013.959235, step=1, tensor_proto=dtype: DT_FLOAT\n",
+-      "tensor_shape {\n",
+-      "}\n",
+-      "tensor_content: \"\\256e2>\"\n",
+-      "), TensorEvent(wall_time=1645720025.060566, step=2, tensor_proto=dtype: DT_FLOAT\n",
+-      "tensor_shape {\n",
+-      "}\n",
+-      "tensor_content: \"A\\323\\202>\"\n",
+-      "), TensorEvent(wall_time=1645720036.696214, step=3, tensor_proto=dtype: DT_FLOAT\n",
+-      "tensor_shape {\n",
+-      "}\n",
+-      "tensor_content: \"\\237\\370H>\"\n",
+-      "), TensorEvent(wall_time=1645720048.571258, step=4, tensor_proto=dtype: DT_FLOAT\n",
+-      "tensor_shape {\n",
+-      "}\n",
+-      "tensor_content: \"\\216@9>\"\n",
+-      "), TensorEvent(wall_time=1645720061.098682, step=5, tensor_proto=dtype: DT_FLOAT\n",
+-      "tensor_shape {\n",
+-      "}\n",
+-      "tensor_content: \"\\273o\\264>\"\n",
+-      "), TensorEvent(wall_time=1645720072.357504, step=6, tensor_proto=dtype: DT_FLOAT\n",
+-      "tensor_shape {\n",
+-      "}\n",
+-      "tensor_content: \"\\322\\314\\342>\"\n",
+-      ")]\n"
+-     ]
+-    }
+-   ],
+-   "source": [
+-    "import tensorflow\n",
+-    "from tensorboard.backend.event_processing.event_accumulator import EventAccumulator\n",
+-    "\n",
+-    "event_acc = EventAccumulator('log/tb/validation')\n",
+-    "event_acc.Reload()\n",
+-    "# Show all tags in the log file\n",
+-    "print(event_acc.tensors.Keys())\n",
+-    "print(event_acc.Tensors('epoch_loss'))"
+-   ]
+-  },
+-  {
+-   "cell_type": "code",
+-   "execution_count": 77,
+-   "id": "4859a5d1",
+-   "metadata": {},
+-   "outputs": [],
+-   "source": [
+-    "import pandas as pd\n",
+-    "import os\n",
+-    "import logging\n",
+-    "\n",
+-    "def get_best_ckpt(ckpt_dir, log_file_path, metric, mode='min'):\n",
+-    "    if mode not in ['min', 'max']:\n",
+-    "        raise NotImplementedError\n",
+-    "    if not os.path.exists(ckpt_dir) or not os.path.exists(log_file_path):\n",
+-    "        return -1, None\n",
+-    "\n",
+-    "    get_best = min if mode == 'min' else max\n",
+-    "    ckpt_list = get_ckpt_list(ckpt_dir)\n",
+-    "    metrics = pd.read_csv(log_file_path, usecols=[metric], squeeze=True).values\n",
+-    "    metrics = [metrics[ckpt_nr] for ckpt_nr, _ in ckpt_list]\n",
+-    "    best_idx = metrics.index(get_best(metrics))\n",
+-    "\n",
+-    "    return ckpt_list[best_idx]\n",
+-    "\n",
+-    "\n",
+-    "def get_latest_ckpt(ckpt_dir):\n",
+-    "    if not os.path.exists(ckpt_dir):\n",
+-    "        return -1, None\n",
+-    "    ckpt_list = get_ckpt_list(ckpt_dir)\n",
+-    "    return ckpt_list[-1]\n",
+-    "\n",
+-    "\n",
+-    "def get_ckpt(ckpt_dir, nr):\n",
+-    "    if os.path.exists(ckpt_dir):\n",
+-    "        ckpt_list = get_ckpt_list(ckpt_dir)\n",
+-    "        for ckpt in ckpt_list:\n",
+-    "            if ckpt[0] == nr:\n",
+-    "                return ckpt\n",
+-    "    logging.warning(f'Could not find checkpoint with number {nr}')\n",
+-    "    return -1, None\n",
+-    "\n",
+-    "\n",
+-    "def get_ckpt_list(ckpt_dir):\n",
+-    "    ckpts = []\n",
+-    "    for ckpt_name in os.listdir(ckpt_dir):\n",
+-    "        if ckpt_name.endswith('.index'):\n",
+-    "            ckpt_nr = int(ckpt_name.split('.')[1])\n",
+-    "            ckpts.append((ckpt_nr, ckpt_name))\n",
+-    "    return sorted(ckpts)"
+-   ]
+-  },
+-  {
+-   "cell_type": "code",
+-   "execution_count": 88,
+-   "id": "3e3443d1",
+-   "metadata": {},
+-   "outputs": [
+-    {
+-     "name": "stdout",
+-     "output_type": "stream",
+-     "text": [
+-      "[(0, 'ckpt.0.-1.index'), (2, 'ckpt.2.-3.index'), (4, 'ckpt.4.-4.index'), (6, 'ckpt.6.-5.index')]\n"
+-     ]
+-    },
+-    {
+-     "data": {
+-      "text/plain": [
+-       "(6, 'ckpt.6.-5.index')"
+-      ]
+-     },
+-     "execution_count": 88,
+-     "metadata": {},
+-     "output_type": "execute_result"
+-    }
+-   ],
+-   "source": [
+-    "print(get_ckpt_list('ckpts'))\n",
+-    "get_ckpt('ckpts', 6)"
+-   ]
+-  },
+-  {
+-   "cell_type": "code",
+-   "execution_count": 17,
+-   "id": "a4d9abcc",
+-   "metadata": {},
+-   "outputs": [
+-    {
+-     "name": "stdout",
+-     "output_type": "stream",
+-     "text": [
+-      "[0.43383649 0.16209731 0.49347773 0.49215332 0.14932509 0.14932509\n",
+-      " 0.14932509 0.14932509 0.14932509 0.15460813 0.2280564 ]\n",
+-      "<class 'numpy.ndarray'>\n"
+-     ]
+-    }
+-   ],
+-   "source": [
+-    "import pandas as pd\n",
+-    "\n",
+-    "path = 'log/log.csv'\n",
+-    "rows = [0, 2, 4, 6]\n",
+-    "out  = pd.read_csv(path, usecols=['val_loss'], squeeze=True).values\n",
+-    "print(out)\n",
+-    "print(type(out))"
+-   ]
+-  },
+-  {
+-   "cell_type": "code",
+-   "execution_count": 18,
+-   "id": "6ad50e23",
+-   "metadata": {},
+-   "outputs": [
+-    {
+-     "data": {
+-      "text/plain": [
+-       "array([0.43383649, 0.16209731, 0.49347773, 0.49215332, 0.14932509,\n",
+-       "       0.14932509, 0.14932509, 0.14932509, 0.14932509, 0.15460813,\n",
+-       "       0.2280564 ])"
+-      ]
+-     },
+-     "execution_count": 18,
+-     "metadata": {},
+-     "output_type": "execute_result"
+-    }
+-   ],
+-   "source": [
+-    "pd.read_csv(path, usecols=['val_loss']).squeeze().values"
+-   ]
+-  }
+- ],
+- "metadata": {
+-  "kernelspec": {
+-   "display_name": "Python 3 (ipykernel)",
+-   "language": "python",
+-   "name": "python3"
+-  },
+-  "language_info": {
+-   "codemirror_mode": {
+-    "name": "ipython",
+-    "version": 3
+-   },
+-   "file_extension": ".py",
+-   "mimetype": "text/x-python",
+-   "name": "python",
+-   "nbconvert_exporter": "python",
+-   "pygments_lexer": "ipython3",
+-   "version": "3.8.10"
+-  }
+- },
+- "nbformat": 4,
+- "nbformat_minor": 5
+-}
+diff --git a/models/testing/local/config.yml b/models/testing/local/config.yml
+index 5682f2a..93429fe 100644
+--- a/models/testing/local/config.yml
++++ b/models/testing/local/config.yml
+@@ -4,4 +4,4 @@ SOURCE_DIR: /home/niklas/bt-code/src
+ MODULE: models.srivastava
+ IMAGE_URL: nschroeder/tensorflow:2.8.0-gpu-v2
+ DATA_DIR: /home/niklas/shared/datasets
+-EXPERIMENT_DIR: /home/niklas/bt-code/models/testing/local
++EXPERIMENT_DIR: /home/niklas/Documents/uni/bt-code/models/testing/local
+diff --git a/models/testing/local/helpful.cmds b/models/testing/local/helpful.cmds
+deleted file mode 100644
+index c9a6062..0000000
+--- a/models/testing/local/helpful.cmds
++++ /dev/null
+@@ -1 +0,0 @@
+-rsync -a params.yml config.yml config.slurm ../
+\ No newline at end of file
+diff --git a/models/testing/local/params.yml b/models/testing/local/params.yml
+index 2991c61..c76b489 100644
+--- a/models/testing/local/params.yml
++++ b/models/testing/local/params.yml
+@@ -2,46 +2,46 @@
+ RANDOM_SEED: 123
+ 
+ # Model
+-LOSS: WBCE  # [MSE, BCE, WBCE] (default MSE)
++LOSS: MSE  # [MSE, BCE, WBCE] (default: MSE)
+ USE_BCE: True # if True BCE and WBCE will be used as metrics (default: False)
+ ## temporal
+-BASE_MODEL: autoencoder  # [autoencoder, composite]
++BASE_MODEL: composite  # [autoencoder, composite]
+ DIM_STATE: 32
+ LSTM_COUNT: 1
+ SEQ_LEN: 20
+-PRED_LEN: 5  # composite specific
++PRED_LEN: 3  # composite specific
+ ## spatial
+ DIM_FEATURE: 128
+ SPATIAL_CODER: dcgan
+ DIM_OBSERVATION: [32, 32, 4]
+-CHANNELS_OUT: 3  # carla specific (default: DIM_OBSERVATION[2])
++CHANNELS_OUT: 1  # carla specific (default: DIM_OBSERVATION[2])
+ BACKBONE: resnet18  # UNet, LinkNet specific
+ ENC_WEIGHTS: None  # UNet, LinkNet specific (default: None)
+ SKIP_CONNECTIONS: True  # VGG/DCGAN [True=concat, residual=add], ResNet [True=add] specific (default: False)
+ FEATURE_ACTIVATION: tanh  # VGG, DCGAN, ResNet specific (default: linear)
+ 
+ # Training
+-LR: [0.001, 0.0005, 0.00025, 0.0000125, 0.000005]
+-LR_BOUNDARIES: [50000, 75000, 100000, 200000]  # PiecewiseConstantDecay specific
+-BATCH_SIZE: 5
+-EPOCHS: 2500
+-STEPS_PER_EPOCH: 10
+-VAL_STEPS: 1
++LR: [0.01, 0.001, 0.0001, 0.00001]
++LR_BOUNDARIES: [60, 80, 120]  # PiecewiseConstantDecay specific
++BATCH_SIZE: 8
++EPOCHS: 30
++STEPS_PER_EPOCH: 8
++VAL_STEPS: 3
+ VAL_FREQ: 1
+-HIST_FREQ: 5
+-CKPT_FREQ: 10
++HIST_FREQ: 1
++CKPT_FREQ: 1
+ PATIENCE: 0  # EarlyStopping specific (default: 0 does not add callback)
+ EXPECT_PARTIAL: False # TensorflowCheckpoint specific (default: False)
+ 
+ # Dataset
+ DATASET: carla/default3_small
+ DATASET_I: [rgb, dep]  # carla specific (default: [rgb])
+-DATASET_O: rgb  # carla specific (default: rgb)
++DATASET_O: isg_edges  # carla specific (default: rgb)
+ DISTRIBUTION: test3  # whitdots specific
+ SEQ_CENTERED: False
+ 
+ # Evaluation
+ EVAL_CKPT: best  # best, latest, [number (for TensorBoard e.g. best x + 1)]
+-EVAL_METRIC: val_pixelspace/MSE  # best specific (default: val_loss)
++# EVAL_METRIC: val_pixelspace/PSNR  # best specific (default: val_loss)
+ EVAL_MODE: min  # best specific (default: min)
+ EVAL_AMOUNT: 10
+diff --git a/models/testing/random_search_kth/config.slurm b/models/testing/random_search_kth/config.slurm
+deleted file mode 100644
+index 0f927f2..0000000
+--- a/models/testing/random_search_kth/config.slurm
++++ /dev/null
+@@ -1,37 +0,0 @@
+-#!/bin/bash
+-
+-#SBATCH -D .
+-#SBATCH --output=lschroeder.%j.%N.out
+-#SBATCH --job-name=LNS_KTH_search
+-#SBATCH --ntasks=1
+-# #SBATCH --cpus-per-task=1
+-#SBATCH --gres=gpu:v100s:1
+-#SBATCH --mem=64G
+-
+-## Max Walltime vorgeben:
+-#SBATCH --time=01:00:00
+-
+-## Auf GPU rechnen:
+-#SBATCH --partition=ex_scioi_gpu
+-
+-# we need internet
+-export https_proxy=http://frontend01:3128/
+-export http_proxy=http://frontend01:3128/ 
+-
+-# load moduels
+-module load python/3.7.4
+-module load singularity/3.7.0 
+-module load nvidia/cuda/11.2
+-
+-# log GPUs utilization
+-GPU_LOGGER_SCRIPT=~/bt-code/models/log_gpus.sh
+-
+-if [ -f "${GPU_LOGGER_SCRIPT}" ]
+-then
+-  echo 'Logging GPU with: ' "${GPU_LOGGER_SCRIPT}"
+-  "${GPU_LOGGER_SCRIPT}" $(pwd) &
+-else
+-  echo 'Could not find GPU logger script at ' "${GPU_LOGGER_SCRIPT}"
+-  exit 1
+-fi
+-
+diff --git a/models/testing/random_search_kth/config.yml b/models/testing/random_search_kth/config.yml
+deleted file mode 100644
+index 626dd7b..0000000
+--- a/models/testing/random_search_kth/config.yml
++++ /dev/null
+@@ -1,6 +0,0 @@
+-TITLE: Srivastava Composite LSTM
+-DESCRIPTION: Test composite LSTM
+-SOURCE_DIR: /home/users/l/l.schroeder/bt-code/src
+-MODULE: models.srivastava_composite
+-IMAGE_URL: /scratch/lschroeder/images/tensorflow_2.8.0-gpu-v1.sif
+-DATA_DIR: /scratch/lschroeder/datasets
+diff --git a/models/testing/random_search_kth/grid.yml b/models/testing/random_search_kth/grid.yml
+deleted file mode 100644
+index 6daeaab..0000000
+--- a/models/testing/random_search_kth/grid.yml
++++ /dev/null
+@@ -1,43 +0,0 @@
+-## Misc
+-RANDOM_SEED: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+-#
+-## Model
+-### temporal
+-DIM_STATE: [20, 32, 48, 60]
+-#SEQ_LEN: 20
+-#PRED_LEN: 10
+-LSTM_COUNT: [1, 2]
+-### spatial
+-DIM_FEATURE: [50, 80, 128, 150, 200]
+-SPATIAL_CODER: [resnet, dcgan]
+-#DIM_OBSERVATION: [64, 64, 1]
+-#CHANNELS_OUT: 1  # carla specific (default: DIM_OBSERVATION[2])
+-#BACKBONE: resnet18  # UNet, LinkNet specific
+-#ENC_WEIGHTS: None  # UNet, LinkNet specific (default: None)
+-SKIP_CONNECTIONS: [True, residual]  # VGG/DCGAN [True=concat, residual=add], ResNet [True=add] specific (default: False)
+-FEATURE_ACTIVATION: [tanh, linear, elu, sigmoid, relu]  # VGG, DCGAN, ResNet specific (default: linear)
+-#
+-## Training
+-LR: [[0.2, 0.05], [0.1, 0.05], [0.01, 0.005], [0.02, 0.01], [0.008, 0.001], [0.004, 0.001], [0.0001, 0.00005], [0.00001, 0.000005]]
+-LR_BOUNDARIES: [[100], [200], [400]]  # PiecewiseConstantDecay specific
+-#BATCH_SIZE: 73
+-#EPOCHS: 12
+-STEPS_PER_EPOCH: [25, 50, 75]
+-#VAL_STEPS: 1
+-#VAL_FREQ: 1
+-#HIST_FREQ: 5  # also used for image saving
+-#CKPT_FREQ: 3
+-#PATIENCE: 0  # EarlyStopping specific (default: 0 does not add callback)
+-#EXPECT_PARTIAL: False # TensorflowCheckpoint specific (default: False)
+-#
+-## Dataset
+-#DATASET: kth
+-##DATASET_I: [rgb, dep]  # carla specific (default: [rgb])
+-##DATASET_O: rgb  # carla specific (default: rgb)
+-##DISTRIBUTION: test3  # whitdots specific
+-#SEQ_CENTERED: False
+-#
+-## Evaluation
+-#EVAL_CKPT: best  # best, latest, [number (for TensorBoard e.g. best x + 1)]
+-#EVAL_METRIC: val_pixelspace/MSE  # best specific (default: val_loss)
+-#EVAL_MODE: min  # best specific (default: min)
+diff --git a/models/testing/random_search_kth/params.yml b/models/testing/random_search_kth/params.yml
+deleted file mode 100644
+index 662673c..0000000
+--- a/models/testing/random_search_kth/params.yml
++++ /dev/null
+@@ -1,43 +0,0 @@
+-# Misc
+-#RANDOM_SEED: 0
+-
+-# Model
+-## temporal
+-#DIM_STATE: 32
+-SEQ_LEN: 20
+-PRED_LEN: 10
+-#LSTM_COUNT: 1
+-## spatial
+-#DIM_FEATURE: 128
+-#SPATIAL_CODER: resnet
+-DIM_OBSERVATION: [64, 64, 4]
+-CHANNELS_OUT: 3  # carla specific (default: DIM_OBSERVATION[2])
+-BACKBONE: resnet18  # UNet, LinkNet specific
+-ENC_WEIGHTS: None  # UNet, LinkNet specific (default: None)
+-#SKIP_CONNECTIONS: True  # VGG/DCGAN [True=concat, residual=add], ResNet [True=add] specific (default: False)
+-#FEATURE_ACTIVATION: tanh  # VGG, DCGAN, ResNet specific (default: linear)
+-
+-# Training
+-#LR: [0.001, 0.0005]
+-#LR_BOUNDARIES: [400]  # PiecewiseConstantDecay specific
+-BATCH_SIZE: 73
+-EPOCHS: 12
+-#STEPS_PER_EPOCH: 50
+-VAL_STEPS: 1
+-VAL_FREQ: 1
+-HIST_FREQ: 5  # also used for image saving
+-CKPT_FREQ: 50
+-PATIENCE: 0  # EarlyStopping specific (default: 0 does not add callback)
+-EXPECT_PARTIAL: False # TensorflowCheckpoint specific (default: False)
+-
+-# Dataset
+-DATASET: carla/default3
+-DATASET_I: [rgb, dep]  # carla specific (default: [rgb])
+-DATASET_O: isg  # carla specific (default: rgb)
+-DISTRIBUTION: test3  # whitdots specific
+-SEQ_CENTERED: False
+-
+-# Evaluation
+-EVAL_CKPT: best  # best, latest, [number (for TensorBoard e.g. best x + 1)]
+-EVAL_METRIC: val_pixelspace/MSE  # best specific (default: val_loss)
+-EVAL_MODE: min  # best specific (default: min)
+diff --git a/src/data/loader.py b/src/data/loader.py
+index cdd9d7c..34578b4 100644
+--- a/src/data/loader.py
++++ b/src/data/loader.py
+@@ -142,7 +142,7 @@ def load_kth(params, mode='train', batch_size=None, as_supervised=False):
+     centered = params['SEQ_CENTERED'] if 'SEQ_CENTERED' in params else True
+ 
+     if params['DIM_OBSERVATION'][0] == 64:
+-        set_name = params['DATASET'] + '/small_no_seqsplits'
++        set_name = params['DATASET'] + '/small'#_no_seqsplits'
+     elif params['DIM_OBSERVATION'][0] == 128:
+         set_name = params['DATASET'] + '/large_no_seqsplits'
+     else:
+diff --git a/src/models/srivastava.py b/src/models/srivastava.py
+index d660062..33f011d 100644
+--- a/src/models/srivastava.py
++++ b/src/models/srivastava.py
+@@ -99,7 +99,7 @@ def evaluate(params):
+ 
+     # evaluate
+     write_evaluation_output(params['EVAL_DIR'], model, data_test, name='eval_data_' + str(ckpt_nr))
+-    plot_results(params, epoch=params['EVAL_CKPT'])
++    plot_results(params, epoch=ckpt_nr)
+     print('- Finished evaluation - ')
+ 
+ 
+
+================================================================================
