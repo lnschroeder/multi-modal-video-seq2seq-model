@@ -2,11 +2,11 @@
 
 This model is a cascade of multiple networks for predicting video frames. The input can be an early fusion of different visual modalities (depth and RGB).
 
-> **Note**
-> Refer to my bachelor's thesis for detailed information: [Evaluating multi-stream networks for
-self-supervised representation learning](https://www.cv.tu-berlin.de/fileadmin/fg140/Main/Lehre/Master/bt_schroeder_blackened.pdf) 
-
 ![An example of the model's architecture](model.svg)
+
+> **Note**
+> Please refer to my bachelor's thesis for details: [Evaluating multi-stream networks for
+self-supervised representation learning](https://www.cv.tu-berlin.de/fileadmin/fg140/Main/Lehre/Master/bt_schroeder_blackened.pdf) 
 
 ## Run experiments
 1. Install YASSMLTK from https://git.tu-berlin.de/cvrs/mltk
