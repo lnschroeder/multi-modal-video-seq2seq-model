@@ -1,11 +1,12 @@
 # Multi-modal video seq2seq model
+
 This model is a cascade of multiple networks for predicting video frames. The input can be an early fusion of different visual modalities (depth and RGB).
 
-![An example of the model's architecture](model.svg)
-
 > **Note**
-> This project was part of my bachelor's thesis. There you will find detailed information: [Evaluating multi-stream networks for
-self-supervised representation learning](https://www.cv.tu-berlin.de/fileadmin/fg140/Main/Lehre/Master/bt_schroeder_blackened.pdf).
+> Refer to my bachelor's thesis for detailed information: [Evaluating multi-stream networks for
+self-supervised representation learning](https://www.cv.tu-berlin.de/fileadmin/fg140/Main/Lehre/Master/bt_schroeder_blackened.pdf) 
+
+![An example of the model's architecture](model.svg)
 
 ## Run experiments
 1. Install YASSMLTK from https://git.tu-berlin.de/cvrs/mltk
