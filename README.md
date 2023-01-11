@@ -6,7 +6,7 @@ This model is a cascade of multiple networks for predicting video frames. The in
 
 > **Note**
 > Please refer to my bachelor's thesis for details: [Evaluating multi-stream networks for
-self-supervised representation learning](https://www.cv.tu-berlin.de/fileadmin/fg140/Main/Lehre/Master/bt_schroeder_blackened.pdf) 
+self-supervised representation learning](https://lnschroeder.github.io/projects/bachelors-thesis) 
 
 ## Run experiments
 1. Install YASSMLTK from https://git.tu-berlin.de/cvrs/mltk
